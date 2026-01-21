@@ -271,7 +271,7 @@
 }
 
 .credentials-hint:last-child {
-  margin-bottom: 0;
+  margin-bottom: 1rem;
 }
 
 .credentials-hint p {
@@ -301,6 +301,34 @@
   font-family: 'Courier New', monospace;
   font-size: 0.8rem;
   color: #a5b4fc;
+}
+
+.admin-access-btn {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  background: rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.4);
+  border-radius: 12px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.admin-access-btn:hover {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.admin-access-btn:active {
+  transform: translateY(0);
 }
 
 /* Responsive */
