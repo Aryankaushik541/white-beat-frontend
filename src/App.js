@@ -12,7 +12,6 @@ function AppContent() {
 
   const handleLogin = (userData) => {
     setUser(userData);
-    // Navigate based on role
     if (userData.role === 'admin') {
       navigate('/admin-dashboard');
     } else {
@@ -29,30 +28,19 @@ function AppContent() {
     <div className="App">
       <Routes>
         <Route path="/" element={<Login onLogin={handleLogin} />} />
-        
-        {/* User Dashboard - Main hub for all features */}
         <Route 
           path="/dashboard" 
           element={user?.role === 'user' ? <UserDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" />} 
         />
-        
-        {/* Chat Dashboard - Messaging interface */}
         <Route 
           path="/chat" 
           element={user?.role === 'user' ? <ChatDashboard user={user} /> : <Navigate to="/" />} 
         />
-        
-        {/* Admin Dashboard */}
         <Route 
           path="/admin-dashboard" 
           element={user?.role === 'admin' ? <AdminDashboard user={user} /> : <Navigate to="/" />} 
         />
-        
-        {/* Redirect old routes */}
-        <Route 
-          path="/user-dashboard" 
-          element={<Navigate to="/dashboard" replace />} 
-        />
+        <Route path="/user-dashboard" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </div>
   );
