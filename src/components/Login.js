@@ -1,58 +1,53 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
-const Login = ({ setUser }) => {
+const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setLoading(true);
 
     try {
-      // Call Django login API
       const response = await axios.post(`${API_URL}/login/`, {
         username,
         password
       });
 
-      const { role, username: userName, user_id, is_staff, is_superuser } = response.data;
-
-      // Set user data
-      setUser({ 
-        username: userName, 
+      const { role, username: user, user_id, is_staff, is_superuser } = response.data;
+      
+      onLogin({
         role,
-        user_id,
-        is_staff,
-        is_superuser
+        username: user,
+        userId: user_id,
+        isStaff: is_staff,
+        isSuperuser: is_superuser
       });
-
-      // Route based on role
-      if (role === 'admin') {
-        navigate('/admin-dashboard');
-      } else {
-        navigate('/user-dashboard');
-      }
     } catch (err) {
       console.error('Login error:', err);
-      if (err.response?.status === 401) {
-        setError('Invalid credentials. Only Django admin users can access admin dashboard.');
-      } else if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError('Login failed. Please try again.');
-      }
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAdminAccess = () => {
+    // Show admin instructions
+    alert(
+      '🔐 Admin Access Instructions:\n\n' +
+      '1. Create a superuser:\n' +
+      '   python manage.py createsuperuser\n\n' +
+      '2. Login with superuser credentials\n\n' +
+      '3. You will be redirected to Admin Dashboard\n\n' +
+      'Only Django staff/superuser can access admin features!'
+    );
   };
 
   return (
@@ -76,7 +71,7 @@ const Login = ({ setUser }) => {
           {error && (
             <div className="error-message">
               <span className="error-icon">⚠️</span>
-              {error}
+              <span>{error}</span>
             </div>
           )}
 
@@ -88,8 +83,8 @@ const Login = ({ setUser }) => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
-              required
               disabled={loading}
+              required
             />
           </div>
 
@@ -101,33 +96,47 @@ const Login = ({ setUser }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
-              required
               disabled={loading}
+              required
             />
           </div>
 
           <button type="submit" className="login-button" disabled={loading}>
             {loading ? (
               <>
-                <span className="spinner-small"></span>
-                Logging in...
+                <div className="spinner-small"></div>
+                <span>Logging in...</span>
               </>
             ) : (
-              'Login'
+              <>
+                <span>🚀</span>
+                <span>Login</span>
+              </>
             )}
           </button>
         </form>
 
         <div className="login-footer">
           <div className="credentials-hint">
-            <p><strong>🔐 Admin Access:</strong></p>
-            <p>Use Django superuser credentials</p>
-            <p className="hint-text">Create with: <code>python manage.py createsuperuser</code></p>
-          </div>
-          <div className="credentials-hint">
             <p><strong>👤 User Access:</strong></p>
-            <p>Any username/password for user dashboard</p>
+            <p>Enter any username/password to create a user account</p>
           </div>
+
+          <div className="credentials-hint">
+            <p><strong>🔐 Admin Access:</strong></p>
+            <p>Login with Django superuser credentials</p>
+            <p className="hint-text">
+              Create superuser: <code>python manage.py createsuperuser</code>
+            </p>
+          </div>
+
+          <button 
+            type="button" 
+            className="admin-access-btn"
+            onClick={handleAdminAccess}
+          >
+            ℹ️ How to Get Admin Access?
+          </button>
         </div>
       </div>
     </div>
