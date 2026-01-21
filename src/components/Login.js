@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
-
-const Login = ({ onLogin }) => {
-  const [isSignup, setIsSignup] = useState(false);
+const Login = () => {
+  const navigate = useNavigate();
+  const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     email: '',
-    phone_number: ''
+    full_name: ''
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -32,40 +31,42 @@ const Login = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      if (isSignup) {
-        // Signup
-        if (!formData.email) {
-          setError('Email is required for signup');
-          setLoading(false);
-          return;
+      const endpoint = isLogin ? '/login/' : '/signup/';
+      const response = await fetch(`http://localhost:8000/api${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (isLogin) {
+          // Store user data
+          localStorage.setItem('username', data.username);
+          localStorage.setItem('isAdmin', data.is_admin);
+          
+          setSuccess('✅ Login successful! Redirecting...');
+          
+          // Redirect to dashboard
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 1000);
+        } else {
+          setSuccess('✅ Account created successfully! Please login.');
+          setTimeout(() => {
+            setIsLogin(true);
+            setFormData({ username: '', password: '', email: '', full_name: '' });
+          }, 2000);
         }
-
-        const response = await axios.post(`${API_URL}/signup/`, {
-          username: formData.username,
-          password: formData.password,
-          email: formData.email,
-          phone_number: formData.phone_number || undefined
-        });
-
-        setSuccess(response.data.message || 'Account created successfully! Please login.');
-        setIsSignup(false);
-        setFormData({ username: formData.username, password: '', email: '', phone_number: '' });
       } else {
-        // Login
-        const response = await axios.post(`${API_URL}/login/`, {
-          username: formData.username,
-          password: formData.password
-        });
-
-        onLogin(response.data);
+        setError(data.error || 'Something went wrong. Please try again.');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      setError(
-        error.response?.data?.error || 
-        error.response?.data?.message ||
-        'An error occurred. Please try again.'
-      );
+    } catch (err) {
+      setError('❌ Cannot connect to server. Please check if backend is running.');
+      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
@@ -73,168 +74,215 @@ const Login = ({ onLogin }) => {
 
   return (
     <div className="login-container">
-      <div className="login-background">
-        <div className="bubble bubble-1"></div>
-        <div className="bubble bubble-2"></div>
-        <div className="bubble bubble-3"></div>
-      </div>
-
-      <div className="login-card glass">
-        <div className="login-header">
-          <div className="logo">💬</div>
-          <h1>White Beat</h1>
-          <p>Full-Featured Messaging Platform</p>
-        </div>
-
-        <div className="login-tabs">
-          <button 
-            className={!isSignup ? 'active' : ''} 
-            onClick={() => {
-              setIsSignup(false);
-              setError('');
-              setSuccess('');
-            }}
-          >
-            Login
-          </button>
-          <button 
-            className={isSignup ? 'active' : ''} 
-            onClick={() => {
-              setIsSignup(true);
-              setError('');
-              setSuccess('');
-            }}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label>👤 Username</label>
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="Enter your username"
-              required
-              autoComplete="username"
-            />
+      <div className="login-content">
+        {/* Left Side - Login Form */}
+        <div className="login-left">
+          <div className="login-logo">
+            <div className="logo-icon">🤖</div>
+            <h1>White Beat</h1>
+            <p>Full-Featured Messaging Platform</p>
           </div>
 
-          {isSignup && (
-            <>
-              <div className="form-group">
-                <label>📧 Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Enter your email"
-                  required
-                  autoComplete="email"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>📱 Phone Number (Optional)</label>
-                <input
-                  type="tel"
-                  name="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleChange}
-                  placeholder="+1234567890"
-                  autoComplete="tel"
-                />
-              </div>
-            </>
-          )}
-
-          <div className="form-group">
-            <label>🔒 Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              required
-              autoComplete={isSignup ? 'new-password' : 'current-password'}
-            />
+          {/* Tab Buttons */}
+          <div className="login-tabs">
+            <button
+              className={`tab-btn ${isLogin ? 'active' : ''}`}
+              onClick={() => {
+                setIsLogin(true);
+                setError('');
+                setSuccess('');
+              }}
+            >
+              Login
+            </button>
+            <button
+              className={`tab-btn ${!isLogin ? 'active' : ''}`}
+              onClick={() => {
+                setIsLogin(false);
+                setError('');
+                setSuccess('');
+              }}
+            >
+              Sign Up
+            </button>
           </div>
 
+          {/* Error/Success Messages */}
           {error && (
-            <div className="alert alert-error">
-              ⚠️ {error}
+            <div className="error-message">
+              <span>⚠️</span>
+              {error}
             </div>
           )}
 
           {success && (
-            <div className="alert alert-success">
-              ✅ {success}
+            <div className="success-message">
+              <span>✅</span>
+              {success}
             </div>
           )}
 
-          <button type="submit" className="submit-btn" disabled={loading}>
-            {loading ? (
-              <span className="loading-spinner">⏳ Processing...</span>
-            ) : (
-              <span>{isSignup ? '🚀 Create Account' : '🔓 Login'}</span>
-            )}
-          </button>
-        </form>
-
-        <div className="login-footer">
-          <div className="features-preview">
-            <div className="feature-item">
-              <span className="feature-icon">💬</span>
-              <span>Direct Messaging</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">👥</span>
-              <span>Group Chats</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">📞</span>
-              <span>Voice & Video Calls</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">📸</span>
-              <span>Status Updates</span>
-            </div>
-          </div>
-
-          {!isSignup && (
-            <div className="demo-credentials">
-              <p className="demo-title">🎭 Demo Credentials</p>
-              <div className="demo-info">
-                <div>
-                  <strong>Admin:</strong> admin / admin123
-                </div>
-                <div>
-                  <strong>User:</strong> Any username/password
-                </div>
+          {/* Form */}
+          <form className="login-form" onSubmit={handleSubmit}>
+            {!isLogin && (
+              <div className="form-group">
+                <label>
+                  <span>👤</span>
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  name="full_name"
+                  placeholder="Enter your full name"
+                  value={formData.full_name}
+                  onChange={handleChange}
+                  required={!isLogin}
+                />
               </div>
+            )}
+
+            <div className="form-group">
+              <label>
+                <span>👤</span>
+                Username
+              </label>
+              <input
+                type="text"
+                name="username"
+                placeholder="Enter your username"
+                value={formData.username}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            {!isLogin && (
+              <div className="form-group">
+                <label>
+                  <span>📧</span>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required={!isLogin}
+                />
+              </div>
+            )}
+
+            <div className="form-group">
+              <label>
+                <span>🔒</span>
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? (
+                <>
+                  <span className="loading"></span>
+                  {isLogin ? 'Logging in...' : 'Creating account...'}
+                </>
+              ) : (
+                <>
+                  <span>{isLogin ? '🔓' : '✨'}</span>
+                  {isLogin ? 'Login' : 'Sign Up'}
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Demo Credentials */}
+          {isLogin && (
+            <div className="demo-credentials">
+              <h4>
+                <span>💡</span>
+                Demo Credentials
+              </h4>
+              <p><strong>Admin:</strong> admin / admin123</p>
+              <p><strong>User:</strong> Any username/password</p>
             </div>
           )}
         </div>
-      </div>
 
-      <div className="login-info">
-        <h2>Welcome to White Beat</h2>
-        <p>A full-featured messaging platform with:</p>
-        <ul>
-          <li>✅ User-to-user chat</li>
-          <li>✅ Group messaging</li>
-          <li>✅ Voice & video calls</li>
-          <li>✅ 24-hour status updates</li>
-          <li>✅ Media messages (images, videos, audio)</li>
-          <li>✅ Message reactions & replies</li>
-          <li>✅ Contact management</li>
-          <li>✅ Privacy controls</li>
-        </ul>
+        {/* Right Side - Welcome Section */}
+        <div className="login-right">
+          <div className="welcome-content">
+            <h2>Welcome to White Beat</h2>
+            <p>A full-featured messaging platform with:</p>
+
+            <div className="features-list">
+              <div className="feature-item">
+                <span>✅</span>
+                <span>User-to-user chat</span>
+              </div>
+              <div className="feature-item">
+                <span>✅</span>
+                <span>Group messaging</span>
+              </div>
+              <div className="feature-item">
+                <span>✅</span>
+                <span>Voice & video calls</span>
+              </div>
+              <div className="feature-item">
+                <span>✅</span>
+                <span>24-hour status updates</span>
+              </div>
+              <div className="feature-item">
+                <span>✅</span>
+                <span>Media messages (images, videos, audio)</span>
+              </div>
+              <div className="feature-item">
+                <span>✅</span>
+                <span>Message reactions & replies</span>
+              </div>
+              <div className="feature-item">
+                <span>✅</span>
+                <span>Contact management</span>
+              </div>
+              <div className="feature-item">
+                <span>✅</span>
+                <span>Privacy controls</span>
+              </div>
+            </div>
+
+            <div className="platform-features">
+              <h3>
+                <span>🎯</span>
+                Platform Features
+              </h3>
+              <ul>
+                <li>
+                  <span>💬</span>
+                  Direct Messaging
+                </li>
+                <li>
+                  <span>👥</span>
+                  Group Chats
+                </li>
+                <li>
+                  <span>📞</span>
+                  Voice & Video Calls
+                </li>
+                <li>
+                  <span>📸</span>
+                  Status Updates
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
