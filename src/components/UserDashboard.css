@@ -729,6 +729,95 @@
   font-weight: 600;
 }
 
+/* ==================== CONVERSATIONS SECTION ==================== */
+.conversations-section {
+  animation: fadeIn 0.5s;
+}
+
+.conversations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.conversation-item {
+  padding: 20px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.conversation-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.conversation-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.conversation-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.conversation-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-info h4 {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  color: #111;
+}
+
+.conversation-info .last-message {
+  margin: 0;
+  color: #667;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.conversation-meta .time {
+  color: #999;
+  font-size: 12px;
+}
+
+.conversation-meta .unread-badge {
+  position: static;
+  background: #25d366;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 /* ==================== CALLS SECTION ==================== */
 .calls-section {
   animation: fadeIn 0.5s;
@@ -1012,6 +1101,47 @@
 .activity-time {
   color: #667;
   font-size: 12px;
+}
+
+.system-stats {
+  padding: 25px;
+  margin-bottom: 30px;
+}
+
+.system-stats h3 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  color: #111;
+}
+
+.stats-table {
+  overflow-x: auto;
+}
+
+.stats-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.stats-table th {
+  background: #f0f2f5;
+  font-weight: 600;
+  color: #111;
+}
+
+.stats-table td {
+  color: #667;
+}
+
+.stats-table tr:hover {
+  background: #f9f9f9;
 }
 
 .admin-actions {
