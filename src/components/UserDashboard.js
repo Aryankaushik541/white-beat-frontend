@@ -4,90 +4,93 @@ import './UserDashboard.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
-const UserDashboard = ({ user, onLogout }) => {
-  // State Management
+function UserDashboard({ user, onLogout }) {
   const [activeSection, setActiveSection] = useState('overview');
+  const [profile, setProfile] = useState(null);
+  const [contacts, setContacts] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [callHistory, setCallHistory] = useState([]);
+  const [statuses, setStatuses] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [messageReactions, setMessageReactions] = useState([]);
+  const [statusViews, setStatusViews] = useState([]);
+  const [apiLogs, setApiLogs] = useState([]);
+  const [systemStats, setSystemStats] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // Profile State
-  const [profile, setProfile] = useState(null);
-  const [editingProfile, setEditingProfile] = useState(false);
+  // Modal states
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showMakeCall, setShowMakeCall] = useState(false);
+  const [showAddStatus, setShowAddStatus] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  
+  // Form states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [groupForm, setGroupForm] = useState({ name: '', description: '' });
+  const [callForm, setCallForm] = useState({ contact: '', type: 'audio' });
+  const [statusForm, setStatusForm] = useState({ type: 'text', content: '', privacy: 'everyone' });
   const [profileForm, setProfileForm] = useState({
     full_name: '',
     bio: '',
-    status_message: '',
-    avatar: ''
+    status: '',
+    avatar: '',
+    phone_number: ''
   });
 
-  // Contacts State
-  const [contacts, setContacts] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddContact, setShowAddContact] = useState(false);
-
-  // Groups State
-  const [groups, setGroups] = useState([]);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [groupForm, setGroupForm] = useState({
-    name: '',
-    description: ''
-  });
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [groupMembers, setGroupMembers] = useState([]);
-
-  // Calls State
-  const [callHistory, setCallHistory] = useState([]);
-  const [showCallModal, setShowCallModal] = useState(false);
-  const [callForm, setCallForm] = useState({
-    receiver: '',
-    call_type: 'audio'
-  });
-
-  // Status State
-  const [statuses, setStatuses] = useState([]);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [statusForm, setStatusForm] = useState({
-    content: '',
-    status_type: 'text',
-    privacy: 'everyone'
-  });
-
-  // Admin State
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminStats, setAdminStats] = useState(null);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
-
-  // Statistics State
+  // Statistics
   const [stats, setStats] = useState({
     totalContacts: 0,
     totalGroups: 0,
     totalCalls: 0,
-    totalStatuses: 0
+    totalStatuses: 0,
+    totalConversations: 0,
+    totalMessages: 0,
+    totalReactions: 0,
+    totalApiCalls: 0
   });
 
-  // Load initial data
   useEffect(() => {
     if (user) {
-      loadProfile();
-      loadContacts();
-      loadGroups();
-      loadCallHistory();
-      loadStatuses();
-      checkAdminStatus();
+      loadAllData();
     }
   }, [user]);
 
-  // Update stats when data changes
   useEffect(() => {
+    // Calculate stats whenever data changes
     setStats({
       totalContacts: contacts.length,
       totalGroups: groups.length,
       totalCalls: callHistory.length,
-      totalStatuses: statuses.length
+      totalStatuses: statuses.length,
+      totalConversations: conversations.length,
+      totalMessages: profile?.total_messages || 0,
+      totalReactions: messageReactions.length,
+      totalApiCalls: apiLogs.length
     });
-  }, [contacts, groups, callHistory, statuses]);
+  }, [contacts, groups, callHistory, statuses, conversations, profile, messageReactions, apiLogs]);
 
-  // ==================== PROFILE FUNCTIONS ====================
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        loadProfile(),
+        loadContacts(),
+        loadGroups(),
+        loadCallHistory(),
+        loadStatuses(),
+        loadConversations(),
+        checkAdminStatus()
+      ]);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadProfile = async () => {
     try {
       const response = await axios.get(`${API_URL}/user-profile/`, {
@@ -97,34 +100,15 @@ const UserDashboard = ({ user, onLogout }) => {
       setProfileForm({
         full_name: response.data.full_name || '',
         bio: response.data.bio || '',
-        status_message: response.data.status_message || '',
-        avatar: response.data.avatar || ''
+        status: response.data.status || '',
+        avatar: response.data.avatar || '',
+        phone_number: response.data.phone_number || ''
       });
     } catch (error) {
       console.error('Error loading profile:', error);
     }
   };
 
-  const updateProfile = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await axios.post(`${API_URL}/update-profile/`, {
-        username: user.username,
-        ...profileForm
-      });
-      alert('Profile updated successfully!');
-      setEditingProfile(false);
-      loadProfile();
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Failed to update profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ==================== CONTACTS FUNCTIONS ====================
   const loadContacts = async () => {
     try {
       const response = await axios.get(`${API_URL}/contacts/`, {
@@ -136,36 +120,6 @@ const UserDashboard = ({ user, onLogout }) => {
     }
   };
 
-  const loadAllUsers = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/users/`, {
-        params: { username: user.username, search: searchQuery }
-      });
-      setAllUsers(response.data.users || []);
-    } catch (error) {
-      console.error('Error loading users:', error);
-    }
-  };
-
-  const addContact = async (contactUsername) => {
-    setLoading(true);
-    try {
-      await axios.post(`${API_URL}/add-contact/`, {
-        username: user.username,
-        contact_username: contactUsername
-      });
-      alert('Contact added successfully!');
-      loadContacts();
-      setShowAddContact(false);
-    } catch (error) {
-      console.error('Error adding contact:', error);
-      alert('Failed to add contact');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ==================== GROUPS FUNCTIONS ====================
   const loadGroups = async () => {
     try {
       const response = await axios.get(`${API_URL}/groups/`, {
@@ -177,64 +131,6 @@ const UserDashboard = ({ user, onLogout }) => {
     }
   };
 
-  const createGroup = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await axios.post(`${API_URL}/create-group/`, {
-        creator: user.username,
-        name: groupForm.name,
-        description: groupForm.description
-      });
-      alert('Group created successfully!');
-      setShowCreateGroup(false);
-      setGroupForm({ name: '', description: '' });
-      loadGroups();
-    } catch (error) {
-      console.error('Error creating group:', error);
-      alert('Failed to create group');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addGroupMember = async (groupId, memberUsername) => {
-    setLoading(true);
-    try {
-      await axios.post(`${API_URL}/add-group-member/`, {
-        group_id: groupId,
-        username: memberUsername,
-        added_by: user.username
-      });
-      alert('Member added successfully!');
-      loadGroups();
-    } catch (error) {
-      console.error('Error adding member:', error);
-      alert('Failed to add member');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const removeGroupMember = async (groupId, memberUsername) => {
-    setLoading(true);
-    try {
-      await axios.post(`${API_URL}/remove-group-member/`, {
-        group_id: groupId,
-        username: memberUsername,
-        removed_by: user.username
-      });
-      alert('Member removed successfully!');
-      loadGroups();
-    } catch (error) {
-      console.error('Error removing member:', error);
-      alert('Failed to remove member');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ==================== CALLS FUNCTIONS ====================
   const loadCallHistory = async () => {
     try {
       const response = await axios.get(`${API_URL}/call-history/`, {
@@ -246,28 +142,6 @@ const UserDashboard = ({ user, onLogout }) => {
     }
   };
 
-  const initiateCall = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await axios.post(`${API_URL}/initiate-call/`, {
-        caller: user.username,
-        receiver: callForm.receiver,
-        call_type: callForm.call_type
-      });
-      alert(`${callForm.call_type === 'audio' ? 'Voice' : 'Video'} call initiated!`);
-      setShowCallModal(false);
-      setCallForm({ receiver: '', call_type: 'audio' });
-      loadCallHistory();
-    } catch (error) {
-      console.error('Error initiating call:', error);
-      alert('Failed to initiate call');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ==================== STATUS FUNCTIONS ====================
   const loadStatuses = async () => {
     try {
       const response = await axios.get(`${API_URL}/statuses/`, {
@@ -279,41 +153,39 @@ const UserDashboard = ({ user, onLogout }) => {
     }
   };
 
-  const createStatus = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const loadConversations = async () => {
     try {
-      await axios.post(`${API_URL}/create-status/`, {
-        username: user.username,
-        content: statusForm.content,
-        status_type: statusForm.status_type,
-        privacy: statusForm.privacy
+      const response = await axios.get(`${API_URL}/conversations/`, {
+        params: { username: user.username }
       });
-      alert('Status created successfully!');
-      setShowStatusModal(false);
-      setStatusForm({ content: '', status_type: 'text', privacy: 'everyone' });
-      loadStatuses();
+      setConversations(response.data.conversations || []);
     } catch (error) {
-      console.error('Error creating status:', error);
-      alert('Failed to create status');
-    } finally {
-      setLoading(false);
+      console.error('Error loading conversations:', error);
     }
   };
 
-  const viewStatus = async (statusId) => {
+  const loadApiLogs = async () => {
     try {
-      await axios.post(`${API_URL}/view-status/`, {
-        status_id: statusId,
-        viewer: user.username
+      const response = await axios.get(`${API_URL}/admin/api-logs/`, {
+        params: { username: user.username }
       });
-      loadStatuses();
+      setApiLogs(response.data.logs || []);
     } catch (error) {
-      console.error('Error viewing status:', error);
+      console.error('Error loading API logs:', error);
     }
   };
 
-  // ==================== ADMIN FUNCTIONS ====================
+  const loadSystemStats = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/system-stats/`, {
+        params: { username: user.username }
+      });
+      setSystemStats(response.data.stats || []);
+    } catch (error) {
+      console.error('Error loading system stats:', error);
+    }
+  };
+
   const checkAdminStatus = async () => {
     try {
       const response = await axios.post(`${API_URL}/verify-admin/`, {
@@ -321,114 +193,226 @@ const UserDashboard = ({ user, onLogout }) => {
       });
       setIsAdmin(response.data.is_admin);
       if (response.data.is_admin) {
-        loadAdminStats();
+        loadApiLogs();
+        loadSystemStats();
       }
     } catch (error) {
       console.error('Error checking admin status:', error);
     }
   };
 
-  const loadAdminStats = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/admin-stats/`, {
-        params: { username: user.username }
-      });
-      setAdminStats(response.data);
-    } catch (error) {
-      console.error('Error loading admin stats:', error);
-    }
-  };
-
-  const makeAdmin = async (targetUsername) => {
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/make-admin/`, {
+      await axios.post(`${API_URL}/update-profile/`, {
         username: user.username,
-        target_username: targetUsername
+        ...profileForm
       });
-      alert(`${targetUsername} is now an admin!`);
-      loadAdminStats();
+      alert('Profile updated successfully!');
+      await loadProfile();
+      setEditMode(false);
     } catch (error) {
-      console.error('Error making admin:', error);
-      alert('Failed to make admin');
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile');
     } finally {
       setLoading(false);
     }
   };
 
-  const removeAdmin = async (targetUsername) => {
+  const searchUsers = async (query) => {
+    if (!query) {
+      setAvailableUsers([]);
+      return;
+    }
+    try {
+      const response = await axios.get(`${API_URL}/users/`, {
+        params: { username: user.username, search: query }
+      });
+      setAvailableUsers(response.data.users || []);
+    } catch (error) {
+      console.error('Error searching users:', error);
+    }
+  };
+
+  const handleAddContact = async (contactUsername) => {
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/remove-admin/`, {
+      await axios.post(`${API_URL}/add-contact/`, {
         username: user.username,
-        target_username: targetUsername
+        contact_username: contactUsername
       });
-      alert(`${targetUsername} is no longer an admin!`);
-      loadAdminStats();
+      alert('Contact added successfully!');
+      await loadContacts();
+      setShowAddContact(false);
+      setSearchQuery('');
+      setAvailableUsers([]);
     } catch (error) {
-      console.error('Error removing admin:', error);
-      alert('Failed to remove admin');
+      console.error('Error adding contact:', error);
+      alert(error.response?.data?.error || 'Failed to add contact');
     } finally {
       setLoading(false);
     }
   };
 
-  // ==================== RENDER FUNCTIONS ====================
+  const handleCreateGroup = async (e) => {
+    e.preventDefault();
+    if (!groupForm.name) {
+      alert('Group name is required');
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post(`${API_URL}/create-group/`, {
+        username: user.username,
+        name: groupForm.name,
+        description: groupForm.description
+      });
+      alert('Group created successfully!');
+      await loadGroups();
+      setShowCreateGroup(false);
+      setGroupForm({ name: '', description: '' });
+    } catch (error) {
+      console.error('Error creating group:', error);
+      alert('Failed to create group');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMakeCall = async (e) => {
+    e.preventDefault();
+    if (!callForm.contact) {
+      alert('Please select a contact');
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post(`${API_URL}/initiate-call/`, {
+        username: user.username,
+        receiver_username: callForm.contact,
+        call_type: callForm.type
+      });
+      alert('Call initiated!');
+      await loadCallHistory();
+      setShowMakeCall(false);
+      setCallForm({ contact: '', type: 'audio' });
+    } catch (error) {
+      console.error('Error making call:', error);
+      alert('Failed to initiate call');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateStatus = async (e) => {
+    e.preventDefault();
+    if (!statusForm.content) {
+      alert('Status content is required');
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post(`${API_URL}/create-status/`, {
+        username: user.username,
+        status_type: statusForm.type,
+        content: statusForm.content,
+        privacy: statusForm.privacy
+      });
+      alert('Status posted successfully!');
+      await loadStatuses();
+      setShowAddStatus(false);
+      setStatusForm({ type: 'text', content: '', privacy: 'everyone' });
+    } catch (error) {
+      console.error('Error creating status:', error);
+      alert('Failed to post status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderOverview = () => (
     <div className="overview-section">
-      <h2>📊 Dashboard Overview</h2>
-      
       <div className="stats-grid">
         <div className="stat-card glass">
           <div className="stat-icon">👥</div>
           <div className="stat-info">
             <h3>{stats.totalContacts}</h3>
-            <p>Contacts</p>
+            <p>Total Contacts</p>
           </div>
         </div>
-        
         <div className="stat-card glass">
           <div className="stat-icon">👨‍👩‍👧‍👦</div>
           <div className="stat-info">
             <h3>{stats.totalGroups}</h3>
-            <p>Groups</p>
+            <p>Total Groups</p>
           </div>
         </div>
-        
         <div className="stat-card glass">
           <div className="stat-icon">📞</div>
           <div className="stat-info">
             <h3>{stats.totalCalls}</h3>
-            <p>Calls</p>
+            <p>Total Calls</p>
           </div>
         </div>
-        
         <div className="stat-card glass">
           <div className="stat-icon">📸</div>
           <div className="stat-info">
             <h3>{stats.totalStatuses}</h3>
-            <p>Statuses</p>
+            <p>Total Statuses</p>
           </div>
         </div>
+        <div className="stat-card glass">
+          <div className="stat-icon">💬</div>
+          <div className="stat-info">
+            <h3>{stats.totalConversations}</h3>
+            <p>Conversations</p>
+          </div>
+        </div>
+        <div className="stat-card glass">
+          <div className="stat-icon">✉️</div>
+          <div className="stat-info">
+            <h3>{stats.totalMessages}</h3>
+            <p>Messages Sent</p>
+          </div>
+        </div>
+        <div className="stat-card glass">
+          <div className="stat-icon">❤️</div>
+          <div className="stat-info">
+            <h3>{stats.totalReactions}</h3>
+            <p>Reactions</p>
+          </div>
+        </div>
+        {isAdmin && (
+          <div className="stat-card glass">
+            <div className="stat-icon">📊</div>
+            <div className="stat-info">
+              <h3>{stats.totalApiCalls}</h3>
+              <p>API Calls</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {profile && (
         <div className="profile-summary glass">
-          <h3>👤 Your Profile</h3>
+          <h3>Profile Summary</h3>
           <div className="profile-info">
             <div className="profile-avatar">
               {profile.avatar ? (
-                <img src={profile.avatar} alt={profile.username} />
+                <img src={profile.avatar} alt={profile.full_name} />
               ) : (
-                <div className="avatar-placeholder">{profile.username[0].toUpperCase()}</div>
+                <div className="avatar-placeholder">
+                  {profile.full_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
+                </div>
               )}
-              <span className={`status-dot ${profile.is_online ? 'online' : 'offline'}`}></span>
+              <div className={`status-dot ${profile.is_online ? 'online' : 'offline'}`}></div>
             </div>
             <div className="profile-details">
-              <h4>{profile.full_name || profile.username}</h4>
-              <p className="username">@{profile.username}</p>
+              <h4>{profile.full_name || user.username}</h4>
+              <p className="username">@{user.username}</p>
               {profile.bio && <p className="bio">{profile.bio}</p>}
-              {profile.status_message && <p className="status-msg">💬 {profile.status_message}</p>}
+              {profile.status && <p className="status-msg">"{profile.status}"</p>}
             </div>
           </div>
         </div>
@@ -437,8 +421,8 @@ const UserDashboard = ({ user, onLogout }) => {
       {isAdmin && (
         <div className="admin-badge glass">
           <h3>🔐 Admin Access</h3>
-          <p>You have administrator privileges</p>
-          <button onClick={() => setActiveSection('admin')} className="btn-primary">
+          <p>You have administrative privileges</p>
+          <button className="btn-primary" onClick={() => setActiveSection('admin')}>
             Open Admin Panel
           </button>
         </div>
@@ -449,16 +433,22 @@ const UserDashboard = ({ user, onLogout }) => {
   const renderProfile = () => (
     <div className="profile-section">
       <div className="section-header">
-        <h2>👤 My Profile</h2>
-        <button onClick={() => setEditingProfile(!editingProfile)} className="btn-secondary">
-          {editingProfile ? '❌ Cancel' : '✏️ Edit Profile'}
-        </button>
+        <h2>My Profile</h2>
+        {!editMode ? (
+          <button className="btn-primary" onClick={() => setEditMode(true)}>
+            ✏️ Edit Profile
+          </button>
+        ) : (
+          <button className="btn-secondary" onClick={() => setEditMode(false)}>
+            ❌ Cancel
+          </button>
+        )}
       </div>
 
       {profile && (
         <div className="profile-card glass">
-          {editingProfile ? (
-            <form onSubmit={updateProfile} className="profile-form">
+          {editMode ? (
+            <form className="profile-form" onSubmit={handleUpdateProfile}>
               <div className="form-group">
                 <label>Full Name</label>
                 <input
@@ -468,7 +458,6 @@ const UserDashboard = ({ user, onLogout }) => {
                   placeholder="Enter your full name"
                 />
               </div>
-
               <div className="form-group">
                 <label>Bio</label>
                 <textarea
@@ -478,17 +467,15 @@ const UserDashboard = ({ user, onLogout }) => {
                   rows="3"
                 />
               </div>
-
               <div className="form-group">
                 <label>Status Message</label>
                 <input
                   type="text"
-                  value={profileForm.status_message}
-                  onChange={(e) => setProfileForm({...profileForm, status_message: e.target.value})}
-                  placeholder="What's on your mind?"
+                  value={profileForm.status}
+                  onChange={(e) => setProfileForm({...profileForm, status: e.target.value})}
+                  placeholder="Hey there! I am using White Beat"
                 />
               </div>
-
               <div className="form-group">
                 <label>Avatar URL</label>
                 <input
@@ -498,9 +485,17 @@ const UserDashboard = ({ user, onLogout }) => {
                   placeholder="https://example.com/avatar.jpg"
                 />
               </div>
-
-              <button type="submit" disabled={loading} className="btn-primary">
-                {loading ? '⏳ Saving...' : '💾 Save Changes'}
+              <div className="form-group">
+                <label>Phone Number</label>
+                <input
+                  type="tel"
+                  value={profileForm.phone_number}
+                  onChange={(e) => setProfileForm({...profileForm, phone_number: e.target.value})}
+                  placeholder="+1234567890"
+                />
+              </div>
+              <button type="submit" className="btn-primary" disabled={loading}>
+                {loading ? 'Saving...' : '💾 Save Changes'}
               </button>
             </form>
           ) : (
@@ -508,30 +503,32 @@ const UserDashboard = ({ user, onLogout }) => {
               <div className="profile-header">
                 <div className="profile-avatar-large">
                   {profile.avatar ? (
-                    <img src={profile.avatar} alt={profile.username} />
+                    <img src={profile.avatar} alt={profile.full_name} />
                   ) : (
-                    <div className="avatar-placeholder-large">{profile.username[0].toUpperCase()}</div>
+                    <div className="avatar-placeholder-large">
+                      {profile.full_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
+                    </div>
                   )}
                 </div>
                 <div className="profile-info-main">
-                  <h3>{profile.full_name || profile.username}</h3>
-                  <p className="username">@{profile.username}</p>
-                  <p className="email">📧 {profile.email}</p>
+                  <h3>{profile.full_name || user.username}</h3>
+                  <p className="username">@{user.username}</p>
+                  <p className="email">📧 {user.email}</p>
                   {profile.phone_number && <p className="phone">📱 {profile.phone_number}</p>}
                 </div>
               </div>
-
+              
               {profile.bio && (
                 <div className="profile-bio">
-                  <h4>About</h4>
+                  <h4>Bio</h4>
                   <p>{profile.bio}</p>
                 </div>
               )}
-
-              {profile.status_message && (
+              
+              {profile.status && (
                 <div className="profile-status">
                   <h4>Status</h4>
-                  <p>💬 {profile.status_message}</p>
+                  <p>"{profile.status}"</p>
                 </div>
               )}
 
@@ -542,12 +539,22 @@ const UserDashboard = ({ user, onLogout }) => {
                     {profile.is_online ? '🟢 Online' : '⚫ Offline'}
                   </span>
                 </div>
-                {profile.last_seen && !profile.is_online && (
-                  <div className="stat">
-                    <span className="stat-label">Last Seen</span>
-                    <span className="stat-value">{new Date(profile.last_seen).toLocaleString()}</span>
-                  </div>
-                )}
+                <div className="stat">
+                  <span className="stat-label">Last Seen</span>
+                  <span className="stat-value">
+                    {profile.last_seen ? new Date(profile.last_seen).toLocaleString() : 'Never'}
+                  </span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Joined</span>
+                  <span className="stat-value">
+                    {new Date(profile.joined_date).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Messages Sent</span>
+                  <span className="stat-value">{profile.total_messages}</span>
+                </div>
               </div>
             </div>
           )}
@@ -559,90 +566,43 @@ const UserDashboard = ({ user, onLogout }) => {
   const renderContacts = () => (
     <div className="contacts-section">
       <div className="section-header">
-        <h2>👥 My Contacts ({contacts.length})</h2>
-        <button onClick={() => {
-          setShowAddContact(true);
-          loadAllUsers();
-        }} className="btn-primary">
+        <h2>My Contacts ({contacts.length})</h2>
+        <button className="btn-primary" onClick={() => setShowAddContact(true)}>
           ➕ Add Contact
         </button>
       </div>
 
-      <div className="contacts-grid">
-        {contacts.map((contact) => (
-          <div key={contact.username} className="contact-card glass">
-            <div className="contact-avatar">
-              {contact.avatar ? (
-                <img src={contact.avatar} alt={contact.full_name} />
-              ) : (
-                <div className="avatar-placeholder">{contact.username[0].toUpperCase()}</div>
-              )}
-              <span className={`status-dot ${contact.is_online ? 'online' : 'offline'}`}></span>
-            </div>
-            <div className="contact-info">
-              <h4>{contact.full_name || contact.username}</h4>
-              <p className="username">@{contact.username}</p>
-              {contact.nickname && <p className="nickname">📝 {contact.nickname}</p>}
-              <p className={`status ${contact.is_online ? 'online' : 'offline'}`}>
-                {contact.is_online ? '🟢 Online' : `⚫ Last seen: ${new Date(contact.last_seen).toLocaleString()}`}
-              </p>
-            </div>
-            {contact.is_favorite && <span className="favorite-badge">⭐</span>}
-          </div>
-        ))}
-      </div>
-
-      {contacts.length === 0 && (
+      {contacts.length === 0 ? (
         <div className="empty-state glass">
           <div className="empty-icon">👥</div>
-          <h3>No contacts yet</h3>
-          <p>Add your first contact to get started!</p>
+          <h3>No Contacts Yet</h3>
+          <p>Start adding contacts to chat with them</p>
         </div>
-      )}
-
-      {/* Add Contact Modal */}
-      {showAddContact && (
-        <div className="modal-overlay" onClick={() => setShowAddContact(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Add New Contact</h2>
-            
-            <div className="search-bar">
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  loadAllUsers();
-                }}
-              />
-            </div>
-
-            <div className="users-list">
-              {allUsers.filter(u => u.username !== user.username && !contacts.find(c => c.username === u.username)).map((u) => (
-                <div key={u.username} className="user-item">
-                  <div className="user-avatar">
-                    {u.avatar ? (
-                      <img src={u.avatar} alt={u.full_name} />
-                    ) : (
-                      <div className="avatar-placeholder">{u.username[0].toUpperCase()}</div>
-                    )}
+      ) : (
+        <div className="contacts-grid">
+          {contacts.map((contact) => (
+            <div key={contact.id} className="contact-card glass">
+              <div className="contact-avatar">
+                {contact.avatar ? (
+                  <img src={contact.avatar} alt={contact.full_name} />
+                ) : (
+                  <div className="avatar-placeholder">
+                    {contact.full_name?.charAt(0) || contact.username.charAt(0).toUpperCase()}
                   </div>
-                  <div className="user-info">
-                    <h4>{u.full_name || u.username}</h4>
-                    <p>@{u.username}</p>
-                  </div>
-                  <button onClick={() => addContact(u.username)} className="btn-primary">
-                    ➕ Add
-                  </button>
-                </div>
-              ))}
+                )}
+                <div className={`status-dot ${contact.is_online ? 'online' : 'offline'}`}></div>
+              </div>
+              <div className="contact-info">
+                <h4>{contact.full_name || contact.username}</h4>
+                <p className="username">@{contact.username}</p>
+                {contact.nickname && <p className="nickname">"{contact.nickname}"</p>}
+                <p className={`status ${contact.is_online ? 'online' : 'offline'}`}>
+                  {contact.is_online ? '🟢 Online' : `Last seen: ${contact.last_seen ? new Date(contact.last_seen).toLocaleString() : 'Never'}`}
+                </p>
+              </div>
+              {contact.is_favorite && <div className="favorite-badge">⭐</div>}
             </div>
-
-            <button onClick={() => setShowAddContact(false)} className="btn-secondary">
-              Close
-            </button>
-          </div>
+          ))}
         </div>
       )}
     </div>
@@ -651,80 +611,39 @@ const UserDashboard = ({ user, onLogout }) => {
   const renderGroups = () => (
     <div className="groups-section">
       <div className="section-header">
-        <h2>👨‍👩‍👧‍👦 My Groups ({groups.length})</h2>
-        <button onClick={() => setShowCreateGroup(true)} className="btn-primary">
+        <h2>My Groups ({groups.length})</h2>
+        <button className="btn-primary" onClick={() => setShowCreateGroup(true)}>
           ➕ Create Group
         </button>
       </div>
 
-      <div className="groups-grid">
-        {groups.map((group) => (
-          <div key={group.id} className="group-card glass">
-            <div className="group-avatar">
-              {group.avatar ? (
-                <img src={group.avatar} alt={group.name} />
-              ) : (
-                <div className="avatar-placeholder">👥</div>
-              )}
-            </div>
-            <div className="group-info">
-              <h4>{group.name}</h4>
-              {group.description && <p className="description">{group.description}</p>}
-              <p className="members">👥 {group.member_count} members</p>
-              {group.unread_count > 0 && (
-                <span className="unread-badge">{group.unread_count}</span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {groups.length === 0 && (
+      {groups.length === 0 ? (
         <div className="empty-state glass">
           <div className="empty-icon">👨‍👩‍👧‍👦</div>
-          <h3>No groups yet</h3>
-          <p>Create your first group to get started!</p>
+          <h3>No Groups Yet</h3>
+          <p>Create a group to start chatting with multiple people</p>
         </div>
-      )}
-
-      {/* Create Group Modal */}
-      {showCreateGroup && (
-        <div className="modal-overlay" onClick={() => setShowCreateGroup(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Create New Group</h2>
-            
-            <form onSubmit={createGroup}>
-              <div className="form-group">
-                <label>Group Name *</label>
-                <input
-                  type="text"
-                  value={groupForm.name}
-                  onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
-                  placeholder="Enter group name"
-                  required
-                />
+      ) : (
+        <div className="groups-grid">
+          {groups.map((group) => (
+            <div key={group.id} className="group-card glass">
+              <div className="group-avatar">
+                {group.avatar ? (
+                  <img src={group.avatar} alt={group.name} />
+                ) : (
+                  '👥'
+                )}
               </div>
-
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={groupForm.description}
-                  onChange={(e) => setGroupForm({...groupForm, description: e.target.value})}
-                  placeholder="What's this group about?"
-                  rows="3"
-                />
+              <div className="group-info">
+                <h4>{group.name}</h4>
+                {group.description && <p className="description">{group.description}</p>}
+                <p className="members">👥 {group.member_count} members</p>
               </div>
-
-              <div className="modal-actions">
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? '⏳ Creating...' : '✅ Create Group'}
-                </button>
-                <button type="button" onClick={() => setShowCreateGroup(false)} className="btn-secondary">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
+              {group.unread_count > 0 && (
+                <div className="unread-badge">{group.unread_count}</div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -733,103 +652,42 @@ const UserDashboard = ({ user, onLogout }) => {
   const renderCalls = () => (
     <div className="calls-section">
       <div className="section-header">
-        <h2>📞 Call History ({callHistory.length})</h2>
-        <button onClick={() => setShowCallModal(true)} className="btn-primary">
+        <h2>Call History ({callHistory.length})</h2>
+        <button className="btn-primary" onClick={() => setShowMakeCall(true)}>
           📞 Make Call
         </button>
       </div>
 
-      <div className="calls-list">
-        {callHistory.map((call) => (
-          <div key={call.id} className="call-item glass">
-            <div className={`call-icon ${call.call_type}`}>
-              {call.call_type === 'video' ? '📹' : '📞'}
-            </div>
-            <div className="call-info">
-              <h4>{call.is_incoming ? call.caller : call.receiver}</h4>
-              <p className="call-type">
-                {call.is_incoming ? '📥 Incoming' : '📤 Outgoing'} {call.call_type} call
-              </p>
-              <p className="call-time">{new Date(call.started_at).toLocaleString()}</p>
-            </div>
-            <div className="call-meta">
-              <span className={`call-status ${call.status}`}>
-                {call.status === 'completed' && '✅'}
-                {call.status === 'missed' && '❌'}
-                {call.status === 'rejected' && '🚫'}
-                {call.status}
-              </span>
-              {call.duration && <span className="call-duration">⏱️ {call.duration}s</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {callHistory.length === 0 && (
+      {callHistory.length === 0 ? (
         <div className="empty-state glass">
           <div className="empty-icon">📞</div>
-          <h3>No call history</h3>
-          <p>Make your first call to get started!</p>
+          <h3>No Call History</h3>
+          <p>Your call history will appear here</p>
         </div>
-      )}
-
-      {/* Make Call Modal */}
-      {showCallModal && (
-        <div className="modal-overlay" onClick={() => setShowCallModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Make a Call</h2>
-            
-            <form onSubmit={initiateCall}>
-              <div className="form-group">
-                <label>Call To *</label>
-                <select
-                  value={callForm.receiver}
-                  onChange={(e) => setCallForm({...callForm, receiver: e.target.value})}
-                  required
-                >
-                  <option value="">Select contact</option>
-                  {contacts.map((contact) => (
-                    <option key={contact.username} value={contact.username}>
-                      {contact.full_name || contact.username}
-                    </option>
-                  ))}
-                </select>
+      ) : (
+        <div className="calls-list">
+          {callHistory.map((call) => (
+            <div key={call.id} className="call-item glass">
+              <div className={`call-icon ${call.call_type}`}>
+                {call.call_type === 'audio' ? '📞' : '📹'}
               </div>
-
-              <div className="form-group">
-                <label>Call Type *</label>
-                <div className="radio-group">
-                  <label>
-                    <input
-                      type="radio"
-                      value="audio"
-                      checked={callForm.call_type === 'audio'}
-                      onChange={(e) => setCallForm({...callForm, call_type: e.target.value})}
-                    />
-                    📞 Voice Call
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      value="video"
-                      checked={callForm.call_type === 'video'}
-                      onChange={(e) => setCallForm({...callForm, call_type: e.target.value})}
-                    />
-                    📹 Video Call
-                  </label>
-                </div>
+              <div className="call-info">
+                <h4>{call.other_user}</h4>
+                <p className="call-type">
+                  {call.is_incoming ? '📥 Incoming' : '📤 Outgoing'} {call.call_type} call
+                </p>
+                <p className="call-time">{new Date(call.started_at).toLocaleString()}</p>
               </div>
-
-              <div className="modal-actions">
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? '⏳ Calling...' : '📞 Call Now'}
-                </button>
-                <button type="button" onClick={() => setShowCallModal(false)} className="btn-secondary">
-                  Cancel
-                </button>
+              <div className="call-meta">
+                <span className={`call-status ${call.status}`}>{call.status}</span>
+                {call.duration > 0 && (
+                  <span className="call-duration">
+                    {Math.floor(call.duration / 60)}:{(call.duration % 60).toString().padStart(2, '0')}
+                  </span>
+                )}
               </div>
-            </form>
-          </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -838,114 +696,105 @@ const UserDashboard = ({ user, onLogout }) => {
   const renderStatus = () => (
     <div className="status-section">
       <div className="section-header">
-        <h2>📸 Status Updates</h2>
-        <button onClick={() => setShowStatusModal(true)} className="btn-primary">
+        <h2>Status Updates</h2>
+        <button className="btn-primary" onClick={() => setShowAddStatus(true)}>
           ➕ Add Status
         </button>
       </div>
 
-      <div className="status-grid">
-        {statuses.map((statusGroup) => (
-          <div key={statusGroup.user.username} className="status-group">
-            <div className="status-user">
-              <div className="status-avatar">
-                {statusGroup.user.avatar ? (
-                  <img src={statusGroup.user.avatar} alt={statusGroup.user.username} />
-                ) : (
-                  <div className="avatar-placeholder">{statusGroup.user.username[0].toUpperCase()}</div>
-                )}
-                <div className="status-ring"></div>
-              </div>
-              <h4>{statusGroup.user.username}</h4>
-            </div>
-            
-            <div className="status-items">
-              {statusGroup.statuses.map((status) => (
-                <div key={status.id} className="status-item glass" onClick={() => viewStatus(status.id)}>
-                  {status.status_type === 'text' && (
-                    <div className="status-text">
-                      <p>{status.content}</p>
-                    </div>
-                  )}
-                  {status.status_type === 'image' && status.media_url && (
-                    <img src={status.media_url} alt="Status" />
-                  )}
-                  {status.status_type === 'video' && status.media_url && (
-                    <video src={status.media_url} controls />
-                  )}
-                  <div className="status-meta">
-                    <span>👁️ {status.view_count} views</span>
-                    <span>{new Date(status.created_at).toLocaleString()}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {statuses.length === 0 && (
+      {statuses.length === 0 ? (
         <div className="empty-state glass">
           <div className="empty-icon">📸</div>
-          <h3>No status updates</h3>
-          <p>Share your first status!</p>
+          <h3>No Status Updates</h3>
+          <p>Share your moments with status updates</p>
+        </div>
+      ) : (
+        <div className="status-grid">
+          {Object.entries(
+            statuses.reduce((acc, status) => {
+              if (!acc[status.username]) acc[status.username] = [];
+              acc[status.username].push(status);
+              return acc;
+            }, {})
+          ).map(([username, userStatuses]) => (
+            <div key={username} className="status-group glass">
+              <div className="status-user">
+                <div className="status-avatar">
+                  {userStatuses[0].avatar ? (
+                    <img src={userStatuses[0].avatar} alt={username} />
+                  ) : (
+                    <div className="avatar-placeholder">
+                      {username.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="status-ring"></div>
+                </div>
+                <h4>{userStatuses[0].full_name || username}</h4>
+              </div>
+              <div className="status-items">
+                {userStatuses.map((status) => (
+                  <div key={status.id} className="status-item glass">
+                    {status.status_type === 'text' ? (
+                      <div className="status-text" style={{ backgroundColor: status.background_color || '#667eea' }}>
+                        <p>{status.content}</p>
+                      </div>
+                    ) : status.status_type === 'image' ? (
+                      <img src={status.media_url} alt="Status" />
+                    ) : (
+                      <video src={status.media_url} controls />
+                    )}
+                    <div className="status-meta">
+                      <span>{new Date(status.created_at).toLocaleString()}</span>
+                      <span>👁️ {status.view_count} views</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
+    </div>
+  );
 
-      {/* Create Status Modal */}
-      {showStatusModal && (
-        <div className="modal-overlay" onClick={() => setShowStatusModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Create Status</h2>
-            
-            <form onSubmit={createStatus}>
-              <div className="form-group">
-                <label>Status Type *</label>
-                <select
-                  value={statusForm.status_type}
-                  onChange={(e) => setStatusForm({...statusForm, status_type: e.target.value})}
-                  required
-                >
-                  <option value="text">📝 Text</option>
-                  <option value="image">🖼️ Image</option>
-                  <option value="video">🎥 Video</option>
-                </select>
-              </div>
+  const renderConversations = () => (
+    <div className="conversations-section">
+      <div className="section-header">
+        <h2>Conversations ({conversations.length})</h2>
+      </div>
 
-              <div className="form-group">
-                <label>Content *</label>
-                <textarea
-                  value={statusForm.content}
-                  onChange={(e) => setStatusForm({...statusForm, content: e.target.value})}
-                  placeholder="What's on your mind?"
-                  rows="4"
-                  required
-                />
+      {conversations.length === 0 ? (
+        <div className="empty-state glass">
+          <div className="empty-icon">💬</div>
+          <h3>No Conversations</h3>
+          <p>Start chatting with your contacts</p>
+        </div>
+      ) : (
+        <div className="conversations-list">
+          {conversations.map((conv) => (
+            <div key={conv.id} className="conversation-item glass">
+              <div className="conversation-avatar">
+                {conv.other_user_avatar ? (
+                  <img src={conv.other_user_avatar} alt={conv.other_user} />
+                ) : (
+                  <div className="avatar-placeholder">
+                    {conv.other_user.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                {conv.is_online && <div className="status-dot online"></div>}
               </div>
-
-              <div className="form-group">
-                <label>Privacy *</label>
-                <select
-                  value={statusForm.privacy}
-                  onChange={(e) => setStatusForm({...statusForm, privacy: e.target.value})}
-                  required
-                >
-                  <option value="everyone">🌍 Everyone</option>
-                  <option value="contacts">👥 Contacts Only</option>
-                  <option value="selected">🔒 Selected Contacts</option>
-                </select>
+              <div className="conversation-info">
+                <h4>{conv.other_user_name || conv.other_user}</h4>
+                <p className="last-message">{conv.last_message || 'No messages yet'}</p>
               </div>
-
-              <div className="modal-actions">
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? '⏳ Posting...' : '✅ Post Status'}
-                </button>
-                <button type="button" onClick={() => setShowStatusModal(false)} className="btn-secondary">
-                  Cancel
-                </button>
+              <div className="conversation-meta">
+                <span className="time">{conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString() : ''}</span>
+                {conv.unread_count > 0 && (
+                  <span className="unread-badge">{conv.unread_count}</span>
+                )}
               </div>
-            </form>
-          </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -953,77 +802,112 @@ const UserDashboard = ({ user, onLogout }) => {
 
   const renderAdmin = () => (
     <div className="admin-section">
-      <h2>🔐 Admin Panel</h2>
-
-      {adminStats && (
-        <>
-          <div className="admin-stats-grid">
-            <div className="admin-stat-card glass">
-              <div className="stat-icon">👥</div>
-              <div className="stat-info">
-                <h3>{adminStats.total_users}</h3>
-                <p>Total Users</p>
-              </div>
-            </div>
-
-            <div className="admin-stat-card glass">
-              <div className="stat-icon">💬</div>
-              <div className="stat-info">
-                <h3>{adminStats.total_messages}</h3>
-                <p>Total Messages</p>
-              </div>
-            </div>
-
-            <div className="admin-stat-card glass">
-              <div className="stat-icon">👨‍👩‍👧‍👦</div>
-              <div className="stat-info">
-                <h3>{adminStats.total_groups}</h3>
-                <p>Total Groups</p>
-              </div>
-            </div>
-
-            <div className="admin-stat-card glass">
-              <div className="stat-icon">📞</div>
-              <div className="stat-info">
-                <h3>{adminStats.total_calls}</h3>
-                <p>Total Calls</p>
-              </div>
-            </div>
-
-            <div className="admin-stat-card glass">
-              <div className="stat-icon">🟢</div>
-              <div className="stat-info">
-                <h3>{adminStats.active_users}</h3>
-                <p>Active Users</p>
-              </div>
-            </div>
+      <h2>Admin Panel</h2>
+      
+      <div className="admin-stats-grid">
+        <div className="admin-stat-card glass">
+          <div className="stat-icon">👥</div>
+          <div className="stat-info">
+            <h3>{stats.totalContacts}</h3>
+            <p>Total Users</p>
           </div>
+        </div>
+        <div className="admin-stat-card glass">
+          <div className="stat-icon">💬</div>
+          <div className="stat-info">
+            <h3>{stats.totalMessages}</h3>
+            <p>Total Messages</p>
+          </div>
+        </div>
+        <div className="admin-stat-card glass">
+          <div className="stat-icon">👨‍👩‍👧‍👦</div>
+          <div className="stat-info">
+            <h3>{stats.totalGroups}</h3>
+            <p>Total Groups</p>
+          </div>
+        </div>
+        <div className="admin-stat-card glass">
+          <div className="stat-icon">📞</div>
+          <div className="stat-info">
+            <h3>{stats.totalCalls}</h3>
+            <p>Total Calls</p>
+          </div>
+        </div>
+        <div className="admin-stat-card glass">
+          <div className="stat-icon">📊</div>
+          <div className="stat-info">
+            <h3>{stats.totalApiCalls}</h3>
+            <p>API Calls</p>
+          </div>
+        </div>
+        <div className="admin-stat-card glass">
+          <div className="stat-icon">❤️</div>
+          <div className="stat-info">
+            <h3>{stats.totalReactions}</h3>
+            <p>Reactions</p>
+          </div>
+        </div>
+      </div>
 
-          {adminStats.recent_activity && (
-            <div className="recent-activity glass">
-              <h3>📊 Recent Activity</h3>
-              <div className="activity-list">
-                {adminStats.recent_activity.map((activity, idx) => (
-                  <div key={idx} className="activity-item">
-                    <span className="activity-icon">{activity.icon}</span>
-                    <span className="activity-text">{activity.text}</span>
-                    <span className="activity-time">{activity.time}</span>
-                  </div>
-                ))}
+      {apiLogs.length > 0 && (
+        <div className="recent-activity glass">
+          <h3>Recent API Activity</h3>
+          <div className="activity-list">
+            {apiLogs.slice(0, 10).map((log, index) => (
+              <div key={index} className="activity-item">
+                <div className="activity-icon">📊</div>
+                <div className="activity-text">
+                  {log.method} {log.endpoint} - {log.status_code}
+                </div>
+                <div className="activity-time">
+                  {new Date(log.created_at).toLocaleTimeString()}
+                </div>
               </div>
-            </div>
-          )}
-        </>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {systemStats.length > 0 && (
+        <div className="system-stats glass">
+          <h3>System Statistics</h3>
+          <div className="stats-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Users</th>
+                  <th>Messages</th>
+                  <th>Groups</th>
+                  <th>Calls</th>
+                  <th>API Calls</th>
+                </tr>
+              </thead>
+              <tbody>
+                {systemStats.slice(0, 7).map((stat, index) => (
+                  <tr key={index}>
+                    <td>{new Date(stat.date).toLocaleDateString()}</td>
+                    <td>{stat.total_users}</td>
+                    <td>{stat.total_messages}</td>
+                    <td>{stat.total_groups}</td>
+                    <td>{stat.total_calls}</td>
+                    <td>{stat.total_api_calls}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       <div className="admin-actions glass">
-        <h3>🛠️ Admin Actions</h3>
-        <p>Manage user permissions and system settings</p>
+        <h3>Admin Actions</h3>
+        <p>Manage users, groups, and system settings</p>
         <div className="action-buttons">
-          <button className="btn-primary">👥 Manage Users</button>
-          <button className="btn-primary">🔐 Manage Admins</button>
-          <button className="btn-primary">📊 View Reports</button>
-          <button className="btn-primary">⚙️ System Settings</button>
+          <button className="btn-primary">Manage Users</button>
+          <button className="btn-primary">Manage Admins</button>
+          <button className="btn-primary">View Reports</button>
+          <button className="btn-primary">System Settings</button>
         </div>
       </div>
     </div>
@@ -1032,20 +916,21 @@ const UserDashboard = ({ user, onLogout }) => {
   return (
     <div className="user-dashboard">
       {/* Navigation */}
-      <nav className="dashboard-nav glass">
+      <nav className="dashboard-nav">
         <div className="nav-brand">
-          <div className="brand-logo">💬</div>
+          <span className="brand-logo">💬</span>
           <h2>White Beat</h2>
         </div>
         <div className="nav-user">
-          <span className="user-name">👤 {user.username}</span>
-          {isAdmin && <span className="admin-badge-small">🔐 Admin</span>}
+          <span className="user-name">{user.username}</span>
+          {isAdmin && <span className="admin-badge-small">Admin</span>}
           <button className="logout-btn" onClick={onLogout}>
             🚪 Logout
           </button>
         </div>
       </nav>
 
+      {/* Main Layout */}
       <div className="dashboard-layout">
         {/* Sidebar */}
         <aside className="dashboard-sidebar glass">
@@ -1057,7 +942,6 @@ const UserDashboard = ({ user, onLogout }) => {
               <span className="menu-icon">📊</span>
               <span className="menu-text">Overview</span>
             </button>
-
             <button
               className={`menu-item ${activeSection === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveSection('profile')}
@@ -1065,40 +949,38 @@ const UserDashboard = ({ user, onLogout }) => {
               <span className="menu-icon">👤</span>
               <span className="menu-text">Profile</span>
             </button>
-
             <button
               className={`menu-item ${activeSection === 'contacts' ? 'active' : ''}`}
               onClick={() => setActiveSection('contacts')}
             >
               <span className="menu-icon">👥</span>
               <span className="menu-text">Contacts</span>
-              {stats.totalContacts > 0 && (
-                <span className="menu-badge">{stats.totalContacts}</span>
-              )}
+              {contacts.length > 0 && <span className="menu-badge">{contacts.length}</span>}
             </button>
-
             <button
               className={`menu-item ${activeSection === 'groups' ? 'active' : ''}`}
               onClick={() => setActiveSection('groups')}
             >
               <span className="menu-icon">👨‍👩‍👧‍👦</span>
               <span className="menu-text">Groups</span>
-              {stats.totalGroups > 0 && (
-                <span className="menu-badge">{stats.totalGroups}</span>
-              )}
+              {groups.length > 0 && <span className="menu-badge">{groups.length}</span>}
             </button>
-
+            <button
+              className={`menu-item ${activeSection === 'conversations' ? 'active' : ''}`}
+              onClick={() => setActiveSection('conversations')}
+            >
+              <span className="menu-icon">💬</span>
+              <span className="menu-text">Conversations</span>
+              {conversations.length > 0 && <span className="menu-badge">{conversations.length}</span>}
+            </button>
             <button
               className={`menu-item ${activeSection === 'calls' ? 'active' : ''}`}
               onClick={() => setActiveSection('calls')}
             >
               <span className="menu-icon">📞</span>
               <span className="menu-text">Calls</span>
-              {stats.totalCalls > 0 && (
-                <span className="menu-badge">{stats.totalCalls}</span>
-              )}
+              {callHistory.length > 0 && <span className="menu-badge">{callHistory.length}</span>}
             </button>
-
             <button
               className={`menu-item ${activeSection === 'status' ? 'active' : ''}`}
               onClick={() => setActiveSection('status')}
@@ -1106,7 +988,6 @@ const UserDashboard = ({ user, onLogout }) => {
               <span className="menu-icon">📸</span>
               <span className="menu-text">Status</span>
             </button>
-
             {isAdmin && (
               <button
                 className={`menu-item ${activeSection === 'admin' ? 'active' : ''}`}
@@ -1120,18 +1001,219 @@ const UserDashboard = ({ user, onLogout }) => {
         </aside>
 
         {/* Main Content */}
-        <main className="dashboard-main">
-          {activeSection === 'overview' && renderOverview()}
-          {activeSection === 'profile' && renderProfile()}
-          {activeSection === 'contacts' && renderContacts()}
-          {activeSection === 'groups' && renderGroups()}
-          {activeSection === 'calls' && renderCalls()}
-          {activeSection === 'status' && renderStatus()}
-          {activeSection === 'admin' && isAdmin && renderAdmin()}
+        <main className="dashboard-main glass">
+          {loading && activeSection === 'overview' ? (
+            <div className="loading">Loading...</div>
+          ) : (
+            <>
+              {activeSection === 'overview' && renderOverview()}
+              {activeSection === 'profile' && renderProfile()}
+              {activeSection === 'contacts' && renderContacts()}
+              {activeSection === 'groups' && renderGroups()}
+              {activeSection === 'conversations' && renderConversations()}
+              {activeSection === 'calls' && renderCalls()}
+              {activeSection === 'status' && renderStatus()}
+              {activeSection === 'admin' && isAdmin && renderAdmin()}
+            </>
+          )}
         </main>
       </div>
+
+      {/* Modals */}
+      {showAddContact && (
+        <div className="modal-overlay" onClick={() => setShowAddContact(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Add Contact</h2>
+            <div className="search-bar">
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  searchUsers(e.target.value);
+                }}
+              />
+            </div>
+            <div className="users-list">
+              {availableUsers.map((u) => (
+                <div key={u.username} className="user-item">
+                  <div className="user-avatar">
+                    {u.avatar ? (
+                      <img src={u.avatar} alt={u.full_name} />
+                    ) : (
+                      <div className="avatar-placeholder">
+                        {u.full_name?.charAt(0) || u.username.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="user-info">
+                    <h4>{u.full_name || u.username}</h4>
+                    <p>@{u.username}</p>
+                  </div>
+                  <button
+                    className="btn-primary"
+                    onClick={() => handleAddContact(u.username)}
+                    disabled={loading}
+                  >
+                    ➕ Add
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowAddContact(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateGroup && (
+        <div className="modal-overlay" onClick={() => setShowCreateGroup(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Create Group</h2>
+            <form onSubmit={handleCreateGroup}>
+              <div className="form-group">
+                <label>Group Name *</label>
+                <input
+                  type="text"
+                  value={groupForm.name}
+                  onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
+                  placeholder="Enter group name"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  value={groupForm.description}
+                  onChange={(e) => setGroupForm({...groupForm, description: e.target.value})}
+                  placeholder="Enter group description"
+                  rows="3"
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowCreateGroup(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Creating...' : '✅ Create Group'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showMakeCall && (
+        <div className="modal-overlay" onClick={() => setShowMakeCall(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Make Call</h2>
+            <form onSubmit={handleMakeCall}>
+              <div className="form-group">
+                <label>Select Contact *</label>
+                <select
+                  value={callForm.contact}
+                  onChange={(e) => setCallForm({...callForm, contact: e.target.value})}
+                  required
+                >
+                  <option value="">Choose a contact</option>
+                  {contacts.map((contact) => (
+                    <option key={contact.username} value={contact.username}>
+                      {contact.full_name || contact.username}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Call Type *</label>
+                <div className="radio-group">
+                  <input
+                    type="radio"
+                    id="audio"
+                    name="callType"
+                    value="audio"
+                    checked={callForm.type === 'audio'}
+                    onChange={(e) => setCallForm({...callForm, type: e.target.value})}
+                  />
+                  <label htmlFor="audio">📞 Voice Call</label>
+                  <input
+                    type="radio"
+                    id="video"
+                    name="callType"
+                    value="video"
+                    checked={callForm.type === 'video'}
+                    onChange={(e) => setCallForm({...callForm, type: e.target.value})}
+                  />
+                  <label htmlFor="video">📹 Video Call</label>
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowMakeCall(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Calling...' : '📞 Call Now'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddStatus && (
+        <div className="modal-overlay" onClick={() => setShowAddStatus(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Add Status</h2>
+            <form onSubmit={handleCreateStatus}>
+              <div className="form-group">
+                <label>Status Type *</label>
+                <select
+                  value={statusForm.type}
+                  onChange={(e) => setStatusForm({...statusForm, type: e.target.value})}
+                >
+                  <option value="text">📝 Text</option>
+                  <option value="image">🖼️ Image</option>
+                  <option value="video">🎥 Video</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Content *</label>
+                <textarea
+                  value={statusForm.content}
+                  onChange={(e) => setStatusForm({...statusForm, content: e.target.value})}
+                  placeholder="What's on your mind?"
+                  rows="3"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Privacy *</label>
+                <select
+                  value={statusForm.privacy}
+                  onChange={(e) => setStatusForm({...statusForm, privacy: e.target.value})}
+                >
+                  <option value="everyone">🌍 Everyone</option>
+                  <option value="contacts">👥 Contacts Only</option>
+                  <option value="selected">🔒 Selected Contacts</option>
+                </select>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowAddStatus(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Posting...' : '✅ Post Status'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
 export default UserDashboard;
