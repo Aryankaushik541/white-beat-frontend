@@ -1,19 +1,29 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 const Login = ({ onLogin }) => {
-  const navigate = useNavigate();
   const [isSignup, setIsSignup] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    email: '',
+    phone_number: ''
+  });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    setError('');
+    setSuccess('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,213 +34,207 @@ const Login = ({ onLogin }) => {
     try {
       if (isSignup) {
         // Signup
+        if (!formData.email) {
+          setError('Email is required for signup');
+          setLoading(false);
+          return;
+        }
+
         const response = await axios.post(`${API_URL}/signup/`, {
-          username,
-          password,
-          email: email || `${username}@whitebeat.com`
+          username: formData.username,
+          password: formData.password,
+          email: formData.email,
+          phone_number: formData.phone_number || undefined
         });
 
-        setSuccess('Account created successfully! Please login.');
+        setSuccess(response.data.message || 'Account created successfully! Please login.');
         setIsSignup(false);
-        setPassword('');
-        setEmail('');
+        setFormData({ username: formData.username, password: '', email: '', phone_number: '' });
       } else {
         // Login
         const response = await axios.post(`${API_URL}/login/`, {
-          username,
-          password
+          username: formData.username,
+          password: formData.password
         });
 
-        const { role, username: user, user_id, is_staff, is_superuser, email: userEmail } = response.data;
-        
-        // Set user data
-        const userData = {
-          role,
-          username: user,
-          userId: user_id,
-          email: userEmail,
-          isStaff: is_staff,
-          isSuperuser: is_superuser
-        };
-        
-        onLogin(userData);
-        
-        // Navigate based on role
-        if (role === 'admin') {
-          navigate('/admin-dashboard');
-        } else {
-          navigate('/user-dashboard');
-        }
+        onLogin(response.data);
       }
-    } catch (err) {
-      console.error('Error:', err);
-      setError(err.response?.data?.error || `${isSignup ? 'Signup' : 'Login'} failed. Please try again.`);
+    } catch (error) {
+      console.error('Error:', error);
+      setError(
+        error.response?.data?.error || 
+        error.response?.data?.message ||
+        'An error occurred. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleMode = () => {
-    setIsSignup(!isSignup);
-    setError('');
-    setSuccess('');
-    setPassword('');
-    setEmail('');
-  };
-
-  const handleAdminInfo = () => {
-    alert(
-      '🔐 Admin Access Information:\n\n' +
-      '✅ Superusers (created via Django command):\n' +
-      '   → Go directly to Admin Dashboard\n' +
-      '   → Full admin privileges\n\n' +
-      '✅ Regular Users (created via Signup):\n' +
-      '   → Go to User Dashboard\n' +
-      '   → Chat and OSINT features\n\n' +
-      '📝 Create Superuser:\n' +
-      '   python manage.py createsuperuser\n\n' +
-      '🎯 Promote User to Admin:\n' +
-      '   Use /api/make-admin/ endpoint\n' +
-      '   (Requires superuser credentials)'
-    );
-  };
-
   return (
     <div className="login-container">
       <div className="login-background">
-        <div className="wave wave1"></div>
-        <div className="wave wave2"></div>
-        <div className="wave wave3"></div>
+        <div className="bubble bubble-1"></div>
+        <div className="bubble bubble-2"></div>
+        <div className="bubble bubble-3"></div>
       </div>
 
       <div className="login-card glass">
         <div className="login-header">
-          <div className="logo-container">
-            <div className="logo pulse"></div>
-          </div>
+          <div className="logo">💬</div>
           <h1>White Beat</h1>
-          <p>AI-Powered Intelligence Platform</p>
+          <p>Full-Featured Messaging Platform</p>
+        </div>
+
+        <div className="login-tabs">
+          <button 
+            className={!isSignup ? 'active' : ''} 
+            onClick={() => {
+              setIsSignup(false);
+              setError('');
+              setSuccess('');
+            }}
+          >
+            Login
+          </button>
+          <button 
+            className={isSignup ? 'active' : ''} 
+            onClick={() => {
+              setIsSignup(true);
+              setError('');
+              setSuccess('');
+            }}
+          >
+            Sign Up
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
-          {error && (
-            <div className="error-message shake">
-              <span className="error-icon">⚠️</span>
-              <span>{error}</span>
-            </div>
-          )}
-
-          {success && (
-            <div className="success-message">
-              <span className="success-icon">✅</span>
-              <span>{success}</span>
-            </div>
-          )}
-
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label>👤 Username</label>
             <input
               type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
               placeholder="Enter your username"
-              disabled={loading}
               required
+              autoComplete="username"
             />
           </div>
 
           {isSignup && (
-            <div className="form-group">
-              <label htmlFor="email">Email (Optional)</label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                disabled={loading}
-              />
-            </div>
+            <>
+              <div className="form-group">
+                <label>📧 Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>📱 Phone Number (Optional)</label>
+                <input
+                  type="tel"
+                  name="phone_number"
+                  value={formData.phone_number}
+                  onChange={handleChange}
+                  placeholder="+1234567890"
+                  autoComplete="tel"
+                />
+              </div>
+            </>
           )}
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label>🔒 Password</label>
             <input
               type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
               placeholder="Enter your password"
-              disabled={loading}
               required
+              autoComplete={isSignup ? 'new-password' : 'current-password'}
             />
           </div>
 
-          <button type="submit" className="login-button" disabled={loading}>
+          {error && (
+            <div className="alert alert-error">
+              ⚠️ {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="alert alert-success">
+              ✅ {success}
+            </div>
+          )}
+
+          <button type="submit" className="submit-btn" disabled={loading}>
             {loading ? (
-              <>
-                <div className="spinner-small"></div>
-                <span>{isSignup ? 'Creating Account...' : 'Logging in...'}</span>
-              </>
+              <span className="loading-spinner">⏳ Processing...</span>
             ) : (
-              <>
-                <span>{isSignup ? '📝' : '🚀'}</span>
-                <span>{isSignup ? 'Sign Up' : 'Login'}</span>
-              </>
+              <span>{isSignup ? '🚀 Create Account' : '🔓 Login'}</span>
             )}
           </button>
         </form>
 
         <div className="login-footer">
-          <div className="toggle-mode">
-            <p>
-              {isSignup ? 'Already have an account?' : "Don't have an account?"}
-            </p>
-            <button 
-              type="button" 
-              className="toggle-button"
-              onClick={toggleMode}
-              disabled={loading}
-            >
-              {isSignup ? 'Login' : 'Sign Up'}
-            </button>
-          </div>
-
-          <div className="divider">
-            <span>OR</span>
-          </div>
-
-          <div className="info-section">
-            <div className="info-card">
-              <div className="info-icon">👤</div>
-              <div className="info-content">
-                <h3>User Access</h3>
-                <p>Sign up to create a user account</p>
-                <p className="hint-text">Access chat and OSINT features</p>
-              </div>
+          <div className="features-preview">
+            <div className="feature-item">
+              <span className="feature-icon">💬</span>
+              <span>Direct Messaging</span>
             </div>
-
-            <div className="info-card">
-              <div className="info-icon">🔐</div>
-              <div className="info-content">
-                <h3>Admin Access</h3>
-                <p>Login with superuser credentials</p>
-                <p className="hint-text">
-                  Create: <code>python manage.py createsuperuser</code>
-                </p>
-              </div>
+            <div className="feature-item">
+              <span className="feature-icon">👥</span>
+              <span>Group Chats</span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-icon">📞</span>
+              <span>Voice & Video Calls</span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-icon">📸</span>
+              <span>Status Updates</span>
             </div>
           </div>
 
-          <button 
-            type="button" 
-            className="admin-info-btn"
-            onClick={handleAdminInfo}
-          >
-            ℹ️ Admin Access Information
-          </button>
+          {!isSignup && (
+            <div className="demo-credentials">
+              <p className="demo-title">🎭 Demo Credentials</p>
+              <div className="demo-info">
+                <div>
+                  <strong>Admin:</strong> admin / admin123
+                </div>
+                <div>
+                  <strong>User:</strong> Any username/password
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+      </div>
+
+      <div className="login-info">
+        <h2>Welcome to White Beat</h2>
+        <p>A full-featured messaging platform with:</p>
+        <ul>
+          <li>✅ User-to-user chat</li>
+          <li>✅ Group messaging</li>
+          <li>✅ Voice & video calls</li>
+          <li>✅ 24-hour status updates</li>
+          <li>✅ Media messages (images, videos, audio)</li>
+          <li>✅ Message reactions & replies</li>
+          <li>✅ Contact management</li>
+          <li>✅ Privacy controls</li>
+        </ul>
       </div>
     </div>
   );
