@@ -8,11 +8,15 @@ import './App.css';
 function App() {
   const [user, setUser] = useState(null);
 
+  const handleLogin = (userData) => {
+    setUser(userData);
+  };
+
   return (
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={<Login setUser={setUser} />} />
+          <Route path="/" element={<Login onLogin={handleLogin} />} />
           <Route 
             path="/user-dashboard" 
             element={user?.role === 'user' ? <UserDashboard user={user} /> : <Navigate to="/" />} 
