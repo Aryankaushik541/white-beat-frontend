@@ -1,9 +1,24 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 .admin-container {
   display: grid;
   grid-template-columns: 280px 1fr;
   min-height: 100vh;
   gap: 1rem;
   padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .loading-state {
@@ -12,6 +27,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: rgba(255, 255, 255, 0.8);
 }
 
@@ -19,7 +35,7 @@
   width: 50px;
   height: 50px;
   border: 4px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #667eea;
+  border-top-color: white;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
@@ -30,7 +46,10 @@
 }
 
 .error-badge {
-  color: #f87171;
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
   font-size: 0.85rem;
   margin-left: 1rem;
 }
@@ -42,6 +61,7 @@
   height: calc(100vh - 2rem);
   position: sticky;
   top: 1rem;
+  border-radius: 16px;
 }
 
 .sidebar-header {
@@ -55,15 +75,34 @@
   margin: 0 auto 1rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 15px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.admin-logo::before {
+  content: '⚙️';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+}
+
+.sidebar-header h2 {
+  color: white;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .admin-badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
   border-radius: 20px;
   font-size: 0.75rem;
   margin-top: 0.5rem;
+  color: white;
 }
 
 .sidebar-nav {
@@ -89,13 +128,14 @@
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
 }
 
 .nav-item.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
 .nav-icon {
@@ -129,10 +169,16 @@
   display: flex;
   flex-direction: column;
   font-size: 0.85rem;
+  color: white;
+}
+
+.profile-info strong {
+  color: white;
+  font-weight: 600;
 }
 
 .profile-info span {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.75rem;
 }
 
@@ -145,10 +191,12 @@
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .logout-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .admin-main {
@@ -167,10 +215,11 @@
 .admin-header h1 {
   font-size: 2rem;
   margin-bottom: 0.25rem;
+  color: white;
 }
 
 .admin-header p {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .header-actions {
@@ -180,18 +229,20 @@
 
 .action-btn {
   padding: 0.75rem 1.25rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .admin-content {
@@ -211,6 +262,7 @@
   align-items: center;
   gap: 1.25rem;
   padding: 1.5rem;
+  border-radius: 16px;
 }
 
 .stat-icon {
@@ -220,7 +272,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(102, 126, 234, 0.2);
   border-radius: 12px;
 }
 
@@ -230,7 +282,7 @@
 
 .stat-label {
   display: block;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.85rem;
   margin-bottom: 0.25rem;
 }
@@ -238,11 +290,14 @@
 .stat-value {
   font-size: 1.75rem;
   margin: 0.25rem 0;
+  color: white;
+  font-weight: 700;
 }
 
 .stat-change {
   font-size: 0.85rem;
   color: #4ade80;
+  font-weight: 500;
 }
 
 .charts-grid {
@@ -253,10 +308,13 @@
 
 .chart-card {
   padding: 1.5rem;
+  border-radius: 16px;
 }
 
 .chart-card h3 {
   margin-bottom: 1.5rem;
+  color: white;
+  font-size: 1.1rem;
 }
 
 .chart-placeholder {
@@ -273,19 +331,24 @@
   border-radius: 8px 8px 0 0;
   transition: all 0.3s ease;
   cursor: pointer;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .bar:hover {
   opacity: 0.8;
   transform: scaleY(1.05);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
 }
 
 .info-card {
   padding: 1.5rem;
+  border-radius: 16px;
 }
 
 .info-card h3 {
   margin-bottom: 1rem;
+  color: white;
+  font-size: 1.1rem;
 }
 
 .quick-links {
@@ -296,22 +359,25 @@
 
 .quick-links button {
   padding: 1rem;
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(102, 126, 234, 0.15);
   border: 1px solid rgba(102, 126, 234, 0.3);
   border-radius: 10px;
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .quick-links button:hover {
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(102, 126, 234, 0.25);
   transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .table-card {
   padding: 1.5rem;
+  border-radius: 16px;
 }
 
 .table-header {
@@ -319,6 +385,11 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.table-header h3 {
+  color: white;
+  font-size: 1.1rem;
 }
 
 .data-table {
@@ -330,7 +401,7 @@
   text-align: left;
   padding: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
   font-weight: 600;
   font-size: 0.85rem;
 }
@@ -338,6 +409,7 @@
 .data-table td {
   padding: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .data-table tbody tr {
@@ -345,7 +417,7 @@
 }
 
 .data-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .status-badge {
@@ -358,19 +430,23 @@
 .status-badge.active {
   background: rgba(74, 222, 128, 0.2);
   color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
 }
 
 .status-badge.inactive {
   background: rgba(248, 113, 113, 0.2);
   color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.3);
 }
 
 .method-badge {
   padding: 0.25rem 0.5rem;
   background: rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.3);
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
+  color: #a5b4fc;
 }
 
 .status-code {
@@ -383,27 +459,31 @@
 .status-code.success {
   background: rgba(74, 222, 128, 0.2);
   color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
 }
 
 .status-code.error {
   background: rgba(248, 113, 113, 0.2);
   color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.3);
 }
 
 .table-action {
   padding: 0.375rem 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   color: white;
   cursor: pointer;
   font-size: 0.8rem;
   margin-right: 0.5rem;
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .table-action:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 @media (max-width: 1024px) {
@@ -414,6 +494,35 @@
     position: relative;
     height: auto;
   }
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-container {
+    padding: 0.5rem;
+  }
+  
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    width: 100%;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
   .charts-grid {
     grid-template-columns: 1fr;
   }
