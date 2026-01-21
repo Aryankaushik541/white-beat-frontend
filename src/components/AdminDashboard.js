@@ -1,28 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import './AdminDashboard.css';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 const AdminDashboard = ({ user }) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const stats = [
-    { label: 'Total Users', value: '1,234', change: '+12%', icon: '👥' },
-    { label: 'API Calls Today', value: '45,678', change: '+8%', icon: '📊' },
-    { label: 'Active Sessions', value: '89', change: '+5%', icon: '🔥' },
-    { label: 'Revenue', value: '$12,345', change: '+15%', icon: '💰' }
-  ];
+  useEffect(() => {
+    fetchStats();
+    // Refresh stats every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const recentUsers = [
-    { id: 1, name: 'John Doe', email: 'john@example.com', status: 'Active', joined: '2024-01-15' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', status: 'Active', joined: '2024-01-14' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', status: 'Inactive', joined: '2024-01-13' },
-    { id: 4, name: 'Alice Williams', email: 'alice@example.com', status: 'Active', joined: '2024-01-12' }
-  ];
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/admin/stats/`);
+      setStats(response.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+      setError('Failed to load statistics');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const apiLogs = [
-    { id: 1, endpoint: '/api/chat', method: 'POST', status: 200, time: '45ms', user: 'john@example.com' },
-    { id: 2, endpoint: '/api/users', method: 'GET', status: 200, time: '23ms', user: 'jane@example.com' },
-    { id: 3, endpoint: '/api/chat', method: 'POST', status: 200, time: '67ms', user: 'bob@example.com' },
-    { id: 4, endpoint: '/api/analytics', method: 'GET', status: 200, time: '34ms', user: 'alice@example.com' }
+  if (loading && !stats) {
+    return (
+      <div className="admin-container">
+        <div className="loading-state">
+          <div className="spinner"></div>
+          <p>Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const statsCards = [
+    { 
+      label: 'Total Users', 
+      value: stats?.total_users || 0, 
+      change: '+12%', 
+      icon: '👥' 
+    },
+    { 
+      label: 'API Calls Today', 
+      value: stats?.api_calls_today || 0, 
+      change: '+8%', 
+      icon: '📊' 
+    },
+    { 
+      label: 'Active Sessions', 
+      value: stats?.active_sessions || 0, 
+      change: '+5%', 
+      icon: '🔥' 
+    },
+    { 
+      label: 'Total Messages', 
+      value: stats?.total_messages || 0, 
+      change: '+15%', 
+      icon: '💬' 
+    }
   ];
 
   return (
@@ -57,11 +101,11 @@ const AdminDashboard = ({ user }) => {
             API Logs
           </button>
           <button 
-            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
+            className={`nav-item ${activeTab === 'django' ? 'active' : ''}`}
+            onClick={() => window.open('http://localhost:8000/admin', '_blank')}
           >
             <span className="nav-icon">⚙️</span>
-            Settings
+            Django Admin
           </button>
         </nav>
 
@@ -81,23 +125,27 @@ const AdminDashboard = ({ user }) => {
         <header className="admin-header">
           <div>
             <h1>Admin Dashboard</h1>
-            <p>Welcome back, {user.username}!</p>
+            <p>Welcome back, {user.username}! {error && <span className="error-badge">⚠️ {error}</span>}</p>
           </div>
           <div className="header-actions">
-            <button className="action-btn glass">🔔 Notifications</button>
-            <button className="action-btn glass">📥 Export Data</button>
+            <button className="action-btn glass" onClick={fetchStats}>
+              🔄 Refresh
+            </button>
+            <button className="action-btn glass" onClick={() => window.open('http://localhost:8000/admin', '_blank')}>
+              🚀 Django Admin
+            </button>
           </div>
         </header>
 
         {activeTab === 'overview' && (
           <div className="admin-content">
             <div className="stats-grid">
-              {stats.map((stat, idx) => (
+              {statsCards.map((stat, idx) => (
                 <div key={idx} className="stat-card glass">
                   <div className="stat-icon">{stat.icon}</div>
                   <div className="stat-details">
                     <span className="stat-label">{stat.label}</span>
-                    <h3 className="stat-value">{stat.value}</h3>
+                    <h3 className="stat-value">{stat.value.toLocaleString()}</h3>
                     <span className="stat-change positive">{stat.change}</span>
                   </div>
                 </div>
@@ -106,27 +154,49 @@ const AdminDashboard = ({ user }) => {
 
             <div className="charts-grid">
               <div className="chart-card glass">
-                <h3>User Growth</h3>
+                <h3>User Growth (Last 6 Days)</h3>
                 <div className="chart-placeholder">
-                  <div className="bar" style={{height: '60%'}}></div>
-                  <div className="bar" style={{height: '75%'}}></div>
-                  <div className="bar" style={{height: '85%'}}></div>
-                  <div className="bar" style={{height: '70%'}}></div>
-                  <div className="bar" style={{height: '90%'}}></div>
-                  <div className="bar" style={{height: '95%'}}></div>
+                  {(stats?.user_growth || [0,0,0,0,0,0]).map((value, idx) => (
+                    <div 
+                      key={idx} 
+                      className="bar" 
+                      style={{height: `${Math.max(value * 10, 20)}%`}}
+                      title={`${value} users`}
+                    ></div>
+                  ))}
                 </div>
               </div>
 
               <div className="chart-card glass">
-                <h3>API Usage</h3>
+                <h3>API Usage (Last 6 Hours)</h3>
                 <div className="chart-placeholder">
-                  <div className="bar" style={{height: '80%'}}></div>
-                  <div className="bar" style={{height: '65%'}}></div>
-                  <div className="bar" style={{height: '90%'}}></div>
-                  <div className="bar" style={{height: '75%'}}></div>
-                  <div className="bar" style={{height: '85%'}}></div>
-                  <div className="bar" style={{height: '70%'}}></div>
+                  {(stats?.api_usage || [0,0,0,0,0,0]).map((value, idx) => (
+                    <div 
+                      key={idx} 
+                      className="bar" 
+                      style={{height: `${Math.max(value * 2, 20)}%`}}
+                      title={`${value} calls`}
+                    ></div>
+                  ))}
                 </div>
+              </div>
+            </div>
+
+            <div className="info-card glass">
+              <h3>🎯 Quick Access</h3>
+              <div className="quick-links">
+                <button onClick={() => window.open('http://localhost:8000/admin/auth/user/', '_blank')}>
+                  👥 Manage Users
+                </button>
+                <button onClick={() => window.open('http://localhost:8000/admin/api/chatmessage/', '_blank')}>
+                  💬 View Messages
+                </button>
+                <button onClick={() => window.open('http://localhost:8000/admin/api/apilog/', '_blank')}>
+                  📊 API Logs
+                </button>
+                <button onClick={() => window.open('http://localhost:8000/admin', '_blank')}>
+                  ⚙️ Full Django Admin
+                </button>
               </div>
             </div>
           </div>
@@ -136,33 +206,41 @@ const AdminDashboard = ({ user }) => {
           <div className="admin-content">
             <div className="table-card glass">
               <div className="table-header">
-                <h3>Recent Users</h3>
-                <button className="action-btn">+ Add User</button>
+                <h3>Recent Users ({stats?.recent_users?.length || 0})</h3>
+                <button className="action-btn" onClick={() => window.open('http://localhost:8000/admin/auth/user/add/', '_blank')}>
+                  + Add User
+                </button>
               </div>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
+                    <th>Username</th>
                     <th>Email</th>
                     <th>Status</th>
+                    <th>Messages</th>
                     <th>Joined</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentUsers.map(user => (
+                  {stats?.recent_users?.map(user => (
                     <tr key={user.id}>
-                      <td>{user.name}</td>
+                      <td><strong>{user.username}</strong></td>
                       <td>{user.email}</td>
                       <td>
                         <span className={`status-badge ${user.status.toLowerCase()}`}>
                           {user.status}
                         </span>
                       </td>
+                      <td>{user.total_messages}</td>
                       <td>{user.joined}</td>
                       <td>
-                        <button className="table-action">Edit</button>
-                        <button className="table-action danger">Delete</button>
+                        <button 
+                          className="table-action"
+                          onClick={() => window.open(`http://localhost:8000/admin/auth/user/${user.id}/change/`, '_blank')}
+                        >
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -176,8 +254,8 @@ const AdminDashboard = ({ user }) => {
           <div className="admin-content">
             <div className="table-card glass">
               <div className="table-header">
-                <h3>API Request Logs</h3>
-                <button className="action-btn">🔄 Refresh</button>
+                <h3>API Request Logs ({stats?.recent_logs?.length || 0})</h3>
+                <button className="action-btn" onClick={fetchStats}>🔄 Refresh</button>
               </div>
               <table className="data-table">
                 <thead>
@@ -185,46 +263,24 @@ const AdminDashboard = ({ user }) => {
                     <th>Endpoint</th>
                     <th>Method</th>
                     <th>Status</th>
-                    <th>Response Time</th>
+                    <th>Time</th>
                     <th>User</th>
+                    <th>Timestamp</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {apiLogs.map(log => (
+                  {stats?.recent_logs?.map(log => (
                     <tr key={log.id}>
                       <td><code>{log.endpoint}</code></td>
                       <td><span className="method-badge">{log.method}</span></td>
-                      <td><span className="status-code success">{log.status}</span></td>
+                      <td><span className={`status-code ${log.status < 400 ? 'success' : 'error'}`}>{log.status}</span></td>
                       <td>{log.time}</td>
                       <td>{log.user}</td>
+                      <td>{log.created_at}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'settings' && (
-          <div className="admin-content">
-            <div className="settings-card glass">
-              <h3>OpenAI Configuration</h3>
-              <div className="setting-item">
-                <label>API Key</label>
-                <input type="password" placeholder="sk-..." className="setting-input" />
-              </div>
-              <div className="setting-item">
-                <label>Model</label>
-                <select className="setting-input">
-                  <option>gpt-4</option>
-                  <option>gpt-3.5-turbo</option>
-                </select>
-              </div>
-              <div className="setting-item">
-                <label>Max Tokens</label>
-                <input type="number" placeholder="2000" className="setting-input" />
-              </div>
-              <button className="save-btn">Save Settings</button>
             </div>
           </div>
         )}
