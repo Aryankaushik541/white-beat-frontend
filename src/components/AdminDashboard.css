@@ -6,6 +6,35 @@
   padding: 1rem;
 }
 
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-badge {
+  color: #f87171;
+  font-size: 0.85rem;
+  margin-left: 1rem;
+}
+
 .admin-sidebar {
   display: flex;
   flex-direction: column;
@@ -107,6 +136,21 @@
   font-size: 0.75rem;
 }
 
+.logout-btn {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
 .admin-main {
   display: flex;
   flex-direction: column;
@@ -147,6 +191,7 @@
 
 .action-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
 }
 
 .admin-content {
@@ -227,11 +272,42 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 8px 8px 0 0;
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .bar:hover {
   opacity: 0.8;
   transform: scaleY(1.05);
+}
+
+.info-card {
+  padding: 1.5rem;
+}
+
+.info-card h3 {
+  margin-bottom: 1rem;
+}
+
+.quick-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.quick-links button {
+  padding: 1rem;
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.quick-links button:hover {
+  background: rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
 }
 
 .table-card {
@@ -309,6 +385,11 @@
   color: #4ade80;
 }
 
+.status-code.error {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
 .table-action {
   padding: 0.375rem 0.75rem;
   background: rgba(255, 255, 255, 0.05);
@@ -325,63 +406,6 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-.table-action.danger:hover {
-  background: rgba(248, 113, 113, 0.2);
-  border-color: #f87171;
-}
-
-.settings-card {
-  padding: 2rem;
-  max-width: 600px;
-}
-
-.settings-card h3 {
-  margin-bottom: 1.5rem;
-}
-
-.setting-item {
-  margin-bottom: 1.5rem;
-}
-
-.setting-item label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.9rem;
-}
-
-.setting-input {
-  width: 100%;
-  padding: 0.875rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  color: white;
-  font-size: 0.95rem;
-}
-
-.setting-input:focus {
-  outline: none;
-  border-color: #667eea;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.save-btn {
-  padding: 0.875rem 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  border-radius: 10px;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.save-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-}
-
 @media (max-width: 1024px) {
   .admin-container {
     grid-template-columns: 1fr;
@@ -389,5 +413,8 @@
   .admin-sidebar {
     position: relative;
     height: auto;
+  }
+  .charts-grid {
+    grid-template-columns: 1fr;
   }
 }
