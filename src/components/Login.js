@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 const Login = ({ onLogin }) => {
+  const navigate = useNavigate();
   const [isSignup, setIsSignup] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -31,6 +33,7 @@ const Login = ({ onLogin }) => {
         setSuccess('Account created successfully! Please login.');
         setIsSignup(false);
         setPassword('');
+        setEmail('');
       } else {
         // Login
         const response = await axios.post(`${API_URL}/login/`, {
@@ -40,14 +43,24 @@ const Login = ({ onLogin }) => {
 
         const { role, username: user, user_id, is_staff, is_superuser, email: userEmail } = response.data;
         
-        onLogin({
+        // Set user data
+        const userData = {
           role,
           username: user,
           userId: user_id,
           email: userEmail,
           isStaff: is_staff,
           isSuperuser: is_superuser
-        });
+        };
+        
+        onLogin(userData);
+        
+        // Navigate based on role
+        if (role === 'admin') {
+          navigate('/admin-dashboard');
+        } else {
+          navigate('/user-dashboard');
+        }
       }
     } catch (err) {
       console.error('Error:', err);
